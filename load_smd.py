@@ -48,6 +48,26 @@ def load_split(split: str, machines: list[str]=MACHINES)->pd.DataFrame:
         frames.append(df)
     return pd.concat(frames,ignore_index=True)
 
+def summarize_and_correlate(df: pd.DataFrame, outpath: str)->pd.DataFrame:
+    corr=df[FEATURE_COLS].corr()
+    print(f"\n{len(FEATURE_COLS)} anonymized metrics -- showing correlation strength distribution:")
+    off_diag=corr.to_numpy()[~np.eye(len(FEATURE_COLS),dtype=bool)]
+    n_constant=df[FEATURE_COLS].std().eq(0).sum()
+    if n_constant:
+         print(f"  note: {n_constant} of {len(FEATURE_COLS)} metrics are constant on this machine subset "
+               f"(zero variance -> undefined correlation, excluded below)")
+         
+    print(f"  mean |correlation| across all metric pairs: {np.nanmean(np.abs(off_diag)):.3f}")
+    print(f"  fraction of pairs with |corr| > 0.5: {np.nanmean(np.abs(off_diag) > 0.5)*100:.1f}%")
+
+    plt.figure(figsize=(11,9))
+    sns.heatmap(corr,cmap="coolwarm",vmin=-1,vmax=1,square=True,xticklabels=True,yticklabels=True,cbar_kws={"labels":"correlations"})
+    plt.title("SMD: Correlation across 38 anynymized metrics")
+    plt.tight_layout()
+    plt.savefig(outpath,dpi=150)
+    print(f"Sabed SMD corelation heatmap-> {outpath}")
+    return corr
+
 if __name__=="__main__":
     out_dir="EDA_Output"
     os.makedirs(out_dir,exist_ok=True)
