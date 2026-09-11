@@ -68,6 +68,34 @@ def summarize_and_correlate(df: pd.DataFrame, outpath: str)->pd.DataFrame:
     print(f"Sabed SMD corelation heatmap-> {outpath}")
     return corr
 
+def plot_top_correlated_pair(df: pd.DataFrame, corr: pd.DataFrame,outpath:str, machine_id: str=None)->None:
+    c=np.nan_to_num(corr.to_numpy(),nan=0.0).copy()
+    np.fill_diagonal(c,0)
+    i,j=np.unravel_index(np.argmax(np.abs(c)),c.shape)
+    f1,f2=FEATURE_COLS[i],FEATURE_COLS[j]
+    r=corr.iloc[i,j]
+
+    if machine_id is None:
+        machine_id=df["machine_id"].iloc[0]
+    sub=df[df["machine_id"]==machine_id].sort_values("time_stamp").iloc[:2000]
+
+    fig,ax1=plt.subplots(figsize=(11,4.5))
+    ax2=ax1.twinx()
+
+    ax1.plot(sub["time_stamp"]/3600,sub[f1],color="tab:red",label=f1)
+    ax2.plot(sub["time_stamp"]/3600,sub[f2],color="tab:blue",label=f2,alpha=0.7)
+
+    ax1.set_ylabel(f1,color="table:red")
+    ax2.set_ylabel(f1,color="tab:blue")
+    ax1.set_xlabel("Hours since trace start")
+
+    plt.title(f"Most correlated metric pair in real SMD data ({f1} vs {f2}),r={r:.2f}")
+    plt.tight_layout()
+    plt.savefig(outpath,dpi=150)
+    plt.close()
+    print(f"Saved top-correlated-pair plot -> {outpath} ({f1} vs {f2}, r={r:.2f})")
+
+
 if __name__=="__main__":
     out_dir="EDA_Output"
     os.makedirs(out_dir,exist_ok=True)
